@@ -1,0 +1,44 @@
+# Example config for mirror-pdf-drive.
+# Copy this file to mirror-pdf-drive.config.yaml and adjust paths.
+
+version: 1
+
+source:
+  # Directory whose .md files will be converted.
+  root: ./Documents-es
+  include:
+    - "**/*.md"
+  exclude: []
+  max_depth: 10
+
+output:
+  # Directory where PDFs are written. Created if missing.
+  root: ./dist/mirror-pdf-drive
+  clean: false
+
+render:
+  html_template: null
+  css_file: null
+  page_size: A4
+  margins:
+    top: 2.0
+    bottom: 2.0
+    left: 2.0
+    right: 2.0
+  metadata:
+    title: Documents-es
+    author: Sebastián Illa
+
+drive:
+  # ID of the destination folder in Google Drive.
+  folder_id: null
+  folder_name: Documents-es PDFs
+  # One of: skip, replace, version.
+  conflict_strategy: skip
+
+auth:
+  # Directory where client_secret.json and token.json live.
+  # Defaults to ~/.config/mirror-pdf-drive/ when omitted.
+  dir: null
+  client_secret_file: client_secret.json
+  token_file: token.json
