@@ -329,9 +329,7 @@ def test_discover_files_with_explicit_paths_returns_only_existing(
     a_abs = valid_source_dir / "a.md"
     b_abs = valid_source_dir / "b.md"
     missing = valid_source_dir / "nope.md"
-    result = mirror.discover_files(
-        cfg, [Path("a.md"), Path("nope.md"), b_abs]
-    )
+    result = mirror.discover_files(cfg, [Path("a.md"), Path("nope.md"), b_abs])
     # Order is the order of inputs; missing files are filtered out.
     assert result == [a_abs, b_abs]
 
@@ -344,9 +342,7 @@ def test_handle_one_render_failure_increments_counter(
         mock.patch("mirror_pdf_drive.mirror.auth.get_drive_service"),
         mock.patch(
             "mirror_pdf_drive.mirror.render_markdown_to_pdf",
-            side_effect=exceptions.RenderFailedError(
-                "boom", context={"pandoc_error": "x"}
-            ),
+            side_effect=exceptions.RenderFailedError("boom", context={"pandoc_error": "x"}),
         ) as m_render,
         mock.patch("mirror_pdf_drive.mirror.drive_client.upload_pdf") as m_upload,
     ):
@@ -372,14 +368,10 @@ def test_handle_one_upload_failure_increments_counter(
         mock.patch("mirror_pdf_drive.mirror.render_markdown_to_pdf"),
         mock.patch(
             "mirror_pdf_drive.mirror.drive_client.upload_pdf",
-            side_effect=exceptions.UploadFailedError(
-                "boom", context={"api_error": "x"}
-            ),
+            side_effect=exceptions.UploadFailedError("boom", context={"api_error": "x"}),
         ) as m_upload,
     ):
-        code = mirror.main(
-            ["--force", "--config", str(valid_config_yaml)]
-        )
+        code = mirror.main(["--force", "--config", str(valid_config_yaml)])
     assert code == mirror.EXIT_UPLOAD_FAILED
     m_upload.assert_called()
 
@@ -393,9 +385,7 @@ def test_handle_one_no_upload_after_render(
         mock.patch("mirror_pdf_drive.mirror.render_markdown_to_pdf") as m_render,
         mock.patch("mirror_pdf_drive.mirror.drive_client.upload_pdf") as m_upload,
     ):
-        code = mirror.main(
-            ["--force", "--no-upload", "--config", str(valid_config_yaml)]
-        )
+        code = mirror.main(["--force", "--no-upload", "--config", str(valid_config_yaml)])
     assert code == mirror.EXIT_OK
     m_render.assert_called()
     m_upload.assert_not_called()
@@ -424,9 +414,7 @@ def test_handle_one_skip_increments_skipped(
         mock.patch("mirror_pdf_drive.mirror.render_markdown_to_pdf") as m_render,
         mock.patch("mirror_pdf_drive.mirror.drive_client.upload_pdf") as m_upload,
     ):
-        code = mirror.main(
-            ["--config", str(valid_config_yaml), str(md)]
-        )
+        code = mirror.main(["--config", str(valid_config_yaml), str(md)])
     assert code == mirror.EXIT_OK
     m_render.assert_not_called()
     m_upload.assert_not_called()
@@ -441,9 +429,7 @@ def test_run_unexpected_app_error_returns_5(
     boom = exceptions.ConfigNotFoundError("oops", context={"path": "x"})
     with (
         mock.patch("mirror_pdf_drive.mirror.auth.get_drive_service"),
-        mock.patch(
-            "mirror_pdf_drive.mirror._handle_one", side_effect=boom
-        ),
+        mock.patch("mirror_pdf_drive.mirror._handle_one", side_effect=boom),
     ):
         code = mirror.main(["--config", str(valid_config_yaml)])
     assert code == mirror.EXIT_UNEXPECTED
@@ -533,9 +519,7 @@ def test_main_setup_logging_verbose(
     assert code == mirror.EXIT_OK
 
 
-def test_main_invalid_config_returns_1(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_main_invalid_config_returns_1(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """An invalid YAML (bad conflict_strategy) → InvalidConfigError → EXIT_CONFIG_ERROR."""
     src = tmp_path / "src"
     src.mkdir()

@@ -26,9 +26,7 @@ def test_build_pandoc_args_with_template_and_css(tmp_path: Path) -> None:
     css = tmp_path / "s.css"
     template.write_text("<html></html>")
     css.write_text("body{}")
-    args = build_pandoc_args(
-        RenderConfig(html_template=template, css_file=css)
-    )
+    args = build_pandoc_args(RenderConfig(html_template=template, css_file=css))
     assert "--template" in args
     assert str(template) in args
     assert "-c" in args
@@ -36,9 +34,7 @@ def test_build_pandoc_args_with_template_and_css(tmp_path: Path) -> None:
 
 
 def test_build_pandoc_args_metadata() -> None:
-    args = build_pandoc_args(
-        RenderConfig(metadata={"title": "X", "author": "Y"})
-    )
+    args = build_pandoc_args(RenderConfig(metadata={"title": "X", "author": "Y"}))
     assert "title=X" in args
     assert "author=Y" in args
 
