@@ -81,8 +81,7 @@ def get_drive_service(auth_config: AuthConfig) -> Any:
     creds = load_or_refresh_credentials(auth_config)
     if not creds:
         raise exceptions.AuthRequiredError(
-            "OAuth token not found or invalid. "
-            "Run 'mirror-pdf-drive --init' to authenticate.",
+            "OAuth token not found or invalid. Run 'mirror-pdf-drive --init' to authenticate.",
             context={"auth_dir": str(resolve_auth_dir(auth_config))},
         )
     return build("drive", "v3", credentials=creds)

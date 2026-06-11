@@ -27,30 +27,20 @@ def _is_truthy_id(file_entry: dict[str, Any] | None) -> bool:
     return bool(file_entry and file_entry.get("id"))
 
 
-def find_file_in_folder(
-    service: DriveService, name: str, folder_id: str
-) -> dict[str, Any] | None:
+def find_file_in_folder(service: DriveService, name: str, folder_id: str) -> dict[str, Any] | None:
     """Find a file by ``name`` in a Drive folder. Returns the file dict or None."""
     query = f"name='{name}' and '{folder_id}' in parents and trashed=false"
-    results = (
-        service.files().list(q=query, fields="files(id, name)").execute()
-    )
+    results = service.files().list(q=query, fields="files(id, name)").execute()
     files = results.get("files", [])
     return files[0] if files else None
 
 
-def create_file(
-    service: DriveService, name: str, folder_id: str, pdf_path: Path
-) -> str:
+def create_file(service: DriveService, name: str, folder_id: str, pdf_path: Path) -> str:
     """Upload a new file to Drive. Returns the new file id."""
     file_metadata = {"name": name, "parents": [folder_id]}
     media = MediaFileUpload(str(pdf_path), mimetype="application/pdf")
     try:
-        file = (
-            service.files()
-            .create(body=file_metadata, media_body=media, fields="id")
-            .execute()
-        )
+        file = service.files().create(body=file_metadata, media_body=media, fields="id").execute()
     except HttpError as exc:
         raise exceptions.UploadFailedError(
             f"Failed to upload {pdf_path.name}",
@@ -59,17 +49,11 @@ def create_file(
     return file.get("id", "")
 
 
-def update_file(
-    service: DriveService, file_id: str, pdf_path: Path
-) -> str:
+def update_file(service: DriveService, file_id: str, pdf_path: Path) -> str:
     """Replace the content of an existing Drive file. Returns the file id."""
     media = MediaFileUpload(str(pdf_path), mimetype="application/pdf")
     try:
-        file = (
-            service.files()
-            .update(fileId=file_id, media_body=media, fields="id")
-            .execute()
-        )
+        file = service.files().update(fileId=file_id, media_body=media, fields="id").execute()
     except HttpError as exc:
         raise exceptions.UploadFailedError(
             f"Failed to update {pdf_path.name}",
@@ -82,9 +66,7 @@ def update_file(
     return file.get("id", "")
 
 
-def next_versioned_name(
-    service: DriveService, name: str, folder_id: str
-) -> str:
+def next_versioned_name(service: DriveService, name: str, folder_id: str) -> str:
     """Compute a non-clashing name by appending ``-N`` before the extension."""
     stem, dot, suffix = name.rpartition(".")
     base = stem or name

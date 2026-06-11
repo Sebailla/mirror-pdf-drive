@@ -11,22 +11,17 @@ requires-python = ">=3.11"
 authors = [{ name = "Sebastián Illa" }]
 license = { text = "MIT" }
 dependencies = [
-    "pypandoc>=1.11",
-    "weasyprint>=60.0",
-    "google-api-python-client>=2.100.0",
-    "google-auth-oauthlib>=1.1.0",
-    "google-auth>=2.23.0",
-    "pydantic>=2.5",
-    "pyyaml>=6.0",
+  "pypandoc>=1.11",
+  "weasyprint>=60.0",
+  "google-api-python-client>=2.100.0",
+  "google-auth-oauthlib>=1.1.0",
+  "google-auth>=2.23.0",
+  "pydantic>=2.5",
+  "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=7.4",
-    "pytest-cov>=4.1",
-    "mypy>=1.7",
-    "ruff>=0.1",
-]
+dev = ["pytest>=7.4", "pytest-cov>=4.1", "mypy>=1.7", "ruff>=0.1"]
 
 [project.scripts]
 mirror-pdf-drive = "mirror_pdf_drive.mirror:main"
