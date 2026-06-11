@@ -117,9 +117,7 @@ def _output_path_for(md_path: Path, cfg: MirrorConfig) -> Path:
     return cfg.output.root / relative.with_suffix(".pdf")
 
 
-def _should_skip(
-    md_path: Path, output_pdf: Path, cfg: MirrorConfig, force: bool
-) -> bool:
+def _should_skip(md_path: Path, output_pdf: Path, cfg: MirrorConfig, force: bool) -> bool:
     """Idempotency check based on mtime: skip if PDF is newer than MD."""
     if force:
         return False
@@ -172,8 +170,7 @@ def _handle_one(
 
     if args.dry_run:
         print(
-            f"[DRY-RUN] render: {md_path} -> {output_pdf} "
-            f"(strategy: {cfg.drive.conflict_strategy})"
+            f"[DRY-RUN] render: {md_path} -> {output_pdf} (strategy: {cfg.drive.conflict_strategy})"
         )
         if not args.no_upload:
             print(f"[DRY-RUN] upload: {output_pdf.name} -> folder {cfg.drive.folder_id}")
@@ -233,9 +230,7 @@ def run(args: argparse.Namespace) -> int:
     try:
         drive_service = auth.get_drive_service(cfg.auth)
     except exceptions.AuthRequiredError as exc:
-        print(
-            "Necesitás autorizar la herramienta. Corré: mirror-pdf-drive --init"
-        )
+        print("Necesitás autorizar la herramienta. Corré: mirror-pdf-drive --init")
         log.debug("auth required: %s", exc.context)
         return EXIT_AUTH_REQUIRED
 
