@@ -52,3 +52,8 @@ dist/
 
 # Mirror-pdf-drive runtime
 .mirror-pdf-drive/
+
+# Local Pi runtime state
+.atl/
+.pi/
+.tmp/
