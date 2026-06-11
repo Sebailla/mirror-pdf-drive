@@ -72,9 +72,7 @@ def drive_service(sandbox_folder_id: str) -> Generator[Any, None, None]:
     except Exception as exc:  # pragma: no cover - depends on local setup
         pytest.skip(f"Could not load OAuth credentials: {exc}")
     if creds is None:
-        pytest.skip(
-            "OAuth token not found. Run `mirror-pdf-drive --init` first."
-        )
+        pytest.skip("OAuth token not found. Run `mirror-pdf-drive --init` first.")
     from googleapiclient.discovery import build
 
     service = build("drive", "v3", credentials=creds, cache_discovery=False)
@@ -98,11 +96,7 @@ def sample_pdf(tmp_path: Path) -> Path:
     """
     pdf_path = tmp_path / f"sample-{uuid.uuid4().hex[:8]}.pdf"
     # Use a unique body so re-uploads create new versions, not identical content.
-    payload = (
-        f"%PDF-1.4\n"
-        f"% integration-test-marker: {uuid.uuid4()}\n"
-        f"%%EOF\n"
-    )
+    payload = f"%PDF-1.4\n% integration-test-marker: {uuid.uuid4()}\n%%EOF\n"
     pdf_path.write_text(payload, encoding="utf-8")
     return pdf_path
 
@@ -130,9 +124,7 @@ def _cleanup_uploaded_files(
 
 
 @pytest.fixture(scope="module", autouse=True)
-def _wipe_sandbox_at_end(
-    drive_service: Any, sandbox_folder_id: str
-) -> Generator[None, None, None]:
+def _wipe_sandbox_at_end(drive_service: Any, sandbox_folder_id: str) -> Generator[None, None, None]:
     """Safety net: wipe the sandbox folder after the whole module runs.
 
     Deletes any file whose name starts with ``sample-`` (the prefix used
@@ -141,11 +133,15 @@ def _wipe_sandbox_at_end(
     """
     yield
     try:
-        results = drive_service.files().list(
-            q=f"'{sandbox_folder_id}' in parents and trashed=false and name contains 'sample-'",
-            fields="files(id, name)",
-            pageSize=100,
-        ).execute()
+        results = (
+            drive_service.files()
+            .list(
+                q=f"'{sandbox_folder_id}' in parents and trashed=false and name contains 'sample-'",
+                fields="files(id, name)",
+                pageSize=100,
+            )
+            .execute()
+        )
         for f in results.get("files", []):
             try:
                 drive_service.files().delete(fileId=f["id"]).execute()
