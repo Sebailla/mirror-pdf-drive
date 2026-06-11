@@ -188,3 +188,60 @@ def test_upload_pdf_with_empty_subfolder_path_behaves_like_no_subfolder(
     service.files().create.assert_called_once()
     create_kwargs = service.files().create.call_args.kwargs
     assert create_kwargs["body"]["parents"] == ["folderX"]
+
+
+# --- query escaping (single quotes and backslashes) ---
+
+
+def test_escape_query_string() -> None:
+    """The helper escapes backslashes first, then single quotes.
+
+    Per the Drive API v3 query language: a literal single quote
+    is escaped with one backslash, and a literal backslash is
+    escaped as two backslashes. Order matters: backslashes must
+    be escaped BEFORE single quotes, otherwise the escaped
+    backslashes would be re-escaped.
+    """
+    assert drive_client._escape_query_string("simple") == "simple"
+    # Single quote escaped as backslash + quote (1 backslash)
+    assert drive_client._escape_query_string("O'Brien") == "O\\'Brien"
+    # Backslash escaped as two backslashes
+    assert drive_client._escape_query_string("back\\slash") == "back\\\\slash"
+    # Multiple single quotes
+    assert drive_client._escape_query_string("a'b'c") == "a\\'b\\'c"
+    # Backslash and single quote combined (backslash escaped first, then single quote)
+    assert drive_client._escape_query_string("a\\'b") == "a\\\\\\'b"
+    # Empty string
+    assert drive_client._escape_query_string("") == ""
+
+
+def test_find_file_escapes_single_quote_in_name() -> None:
+    """A name with a single quote must be escaped in the query."""
+    service = mock.MagicMock()
+    service.files().list.return_value.execute.return_value = {"files": []}
+    drive_client.find_file_in_folder(service, "O'Brien", "parent123")
+    query = service.files().list.call_args.kwargs["q"]
+    # The literal name should be present with the quote escaped as backslash-quote
+    assert "O\\'Brien" in query, f"Expected escaped single quote in query, got: {query}"
+
+
+def test_find_or_create_folder_escapes_single_quote_in_name() -> None:
+    """A folder name with a single quote must be escaped in the query."""
+    service = mock.MagicMock()
+    service.files().list.return_value.execute.return_value = {
+        "files": [{"id": "existing123", "name": "User's Docs"}]
+    }
+    result = drive_client.find_or_create_folder(service, "User's Docs", "parent123")
+    assert result == "existing123"
+    query = service.files().list.call_args.kwargs["q"]
+    assert "User\\'s Docs" in query, f"Expected escaped single quote in query, got: {query}"
+
+
+def test_find_file_with_simple_name_unchanged() -> None:
+    """A name without special chars passes through to the query unchanged."""
+    service = mock.MagicMock()
+    service.files().list.return_value.execute.return_value = {"files": []}
+    drive_client.find_file_in_folder(service, "simple-name.md", "parent123")
+    query = service.files().list.call_args.kwargs["q"]
+    # The name should be in the query as-is (no escaping needed)
+    assert "'simple-name.md'" in query, f"Expected unescaped name, got: {query}"
