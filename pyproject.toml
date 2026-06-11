@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mirror-pdf-drive"
-version = "0.1.0"
+version = "0.2.0"
 description = "CLI to mirror Markdown documentation to PDF on Google Drive"
 readme = "README.md"
 requires-python = ">=3.11"
