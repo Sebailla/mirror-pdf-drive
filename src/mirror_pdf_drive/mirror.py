@@ -16,7 +16,8 @@ import sys
 from pathlib import Path
 from typing import Iterable, Sequence
 
-from . import __version__, auth, config as config_mod, drive_client, exceptions
+from . import __version__, auth, drive_client, exceptions
+from . import config as config_mod
 from .config import MirrorConfig
 from .renderer import render_markdown_to_pdf
 

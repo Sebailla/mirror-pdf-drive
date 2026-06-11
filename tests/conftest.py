@@ -46,9 +46,9 @@ def valid_config_yaml(valid_source_dir: Path, tmp_path: Path) -> Path:
         "\n".join(
             [
                 "version: 1",
-                f"source:",
+                "source:",
                 f"  root: {valid_source_dir}",
-                f"output:",
+                "output:",
                 f"  root: {tmp_path / 'out'}",
                 "render:",
                 "  page_size: A4",
