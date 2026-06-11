@@ -1,8 +1,8 @@
 ---
 title: Validación end-to-end de la skill de Pi
 author: Sebastián Illa
-version: 0.1.0
-status: draft
+version: 0.4.1
+status: stable
 ---
 
 # Validación end-to-end de la skill de `mirror-pdf-drive`
@@ -35,8 +35,9 @@ source .venv/bin/activate
 mirror-pdf-drive --version
 ```
 
-**Esperado**: `mirror-pdf-drive 0.3.0`. Si da error, el problema
-es de instalación, no de la skill.
+**Esperado**: `mirror-pdf-drive 0.4.1` (o la versión más
+reciente). Si da error, el problema es de instalación, no
+de la skill.
 
 ### 2. Abrí pi en este mismo directorio
 
@@ -56,7 +57,7 @@ esperado antes de pasar al siguiente.
 ```
 
 **Esperado**: pi lee el `SKILL.md`, ejecuta el binario desde el
-venv, reporta `mirror-pdf-drive 0.3.0`.
+venv, reporta `mirror-pdf-drive 0.4.1` (o la versión actual).
 
 #### b) Trigger por intención
 
