@@ -286,3 +286,45 @@ def test_upload_failure_raises_for_invalid_folder(
     error_msg = str(exc_info.value)
     assert "Failed" in error_msg
     assert bogus_folder_id in error_msg
+
+
+def test_upload_creates_project_subfolder(
+    drive_service: Any,
+    sandbox_folder_id: str,
+    sample_pdf: Path,
+    uploaded_files: list[str],
+) -> None:
+    """Uploading with subfolder_path creates a chain of folders in Drive
+    and the file ends up inside the final folder."""
+    subfolder_path = [f"mirror-pdf-int-{uuid.uuid4().hex[:6]}", "docs", "sub"]
+    file_id = drive_client.upload_pdf(
+        sample_pdf,
+        drive_service,
+        sandbox_folder_id,
+        conflict_strategy="skip",
+        subfolder_path=subfolder_path,
+    )
+    uploaded_files.append(file_id)
+
+    assert file_id, "upload_pdf returned empty file id"
+
+    # Walk the chain and verify each folder exists under its parent.
+    parent = sandbox_folder_id
+    folder_ids: list[str] = []
+    for name in subfolder_path:
+        query = (
+            f"name='{name}' and '{parent}' in parents "
+            f"and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        )
+        results = drive_service.files().list(q=query, fields="files(id, name)").execute()
+        matches = results.get("files", [])
+        assert matches, f"Folder {name!r} not found under {parent}"
+        folder_ids.append(matches[0]["id"])
+        parent = matches[0]["id"]
+
+    # Verify the file is in the final folder.
+    file_meta = drive_service.files().get(
+        fileId=file_id, fields="id, name, parents"
+    ).execute()
+    assert file_meta["name"] == sample_pdf.name
+    assert file_meta["parents"] == [folder_ids[-1]]

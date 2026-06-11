@@ -55,8 +55,26 @@ class RenderConfig(pydantic.BaseModel):
 
 
 class DriveConfig(pydantic.BaseModel):
+    """Google Drive configuration.
+
+    The CLI mirrors the local source tree into a per-project
+    subfolder of a single fixed root folder. Resolution order:
+
+    1. ``root_folder_id`` is the fixed root folder in Drive where
+       all projects are mirrored. Recommended: a single dedicated
+       folder like "Mirror PDFs" in your Drive root.
+    2. ``folder_id`` is the legacy single-folder target. Kept for
+       backwards compatibility; ``root_folder_id`` takes
+       precedence when both are set.
+    3. At least one of the two must be set.
+    4. ``project_folder_name`` overrides the auto-detected project
+       folder name (default: ``Path.cwd().name``).
+    """
+
+    root_folder_id: str | None = None
     folder_id: str | None = None
     folder_name: str = "Documents-es PDFs"
+    project_folder_name: str | None = None
     conflict_strategy: str = "skip"
 
     @pydantic.field_validator("conflict_strategy")
@@ -65,6 +83,21 @@ class DriveConfig(pydantic.BaseModel):
         if v not in ("skip", "replace", "version"):
             raise ValueError(f"invalid conflict_strategy: {v}")
         return v
+
+    @pydantic.model_validator(mode="after")
+    def _at_least_one_target(self) -> "DriveConfig":
+        if self.root_folder_id is None and self.folder_id is None:
+            raise ValueError(
+                "drive config requires either root_folder_id or folder_id"
+            )
+        return self
+
+    def effective_root_folder_id(self) -> str:
+        """Return the root folder id, preferring ``root_folder_id`` over legacy ``folder_id``."""
+        if self.root_folder_id is not None:
+            return self.root_folder_id
+        assert self.folder_id is not None  # guaranteed by validator
+        return self.folder_id
 
 
 class AuthConfig(pydantic.BaseModel):
