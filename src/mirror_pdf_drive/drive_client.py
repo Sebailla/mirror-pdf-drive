@@ -27,13 +27,39 @@ def _is_truthy_id(file_entry: dict[str, Any] | None) -> bool:
     return bool(file_entry and file_entry.get("id"))
 
 
+def _escape_query_string(value: str) -> str:
+    """Escape a string for safe interpolation into a Drive API query.
+
+    The Drive API v3 query language uses single quotes for string
+    literals. A literal single quote inside the value is escaped with
+    a backslash, and a literal backslash is escaped as ``\\``. The
+    resulting string is safe to drop between single quotes in a
+    query like ``name='<value>'``.
+
+    Order matters: backslashes must be escaped BEFORE single quotes,
+    otherwise the escaped backslashes would be re-escaped.
+
+    Examples:
+        >>> _escape_query_string("simple")
+        "simple"
+        >>> _escape_query_string("O'Brien")
+        "O\\'Brien"
+        >>> _escape_query_string("back\\slash")
+        "back\\\\slash"
+    """
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
 def find_file_in_folder(service: DriveService, name: str, folder_id: str) -> dict[str, Any] | None:
     """Find a file by ``name`` in a Drive folder. Returns the file dict or None.
 
     Raises ``UploadFailedError`` if the folder doesn't exist or the API
     returns an HTTP error. A missing file in an existing folder returns None.
     """
-    query = f"name='{name}' and '{folder_id}' in parents and trashed=false"
+    query = (
+        f"name='{_escape_query_string(name)}' "
+        f"and '{folder_id}' in parents and trashed=false"
+    )
     try:
         results = service.files().list(q=query, fields="files(id, name)").execute()
     except HttpError as exc:
@@ -101,7 +127,7 @@ def find_or_create_folder(service: DriveService, name: str, parent_id: str) -> s
     Raises ``UploadFailedError`` on API errors.
     """
     query = (
-        f"name='{name}' and '{parent_id}' in parents "
+        f"name='{_escape_query_string(name)}' and '{parent_id}' in parents "
         f"and mimeType='application/vnd.google-apps.folder' and trashed=false"
     )
     try:
