@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import io
-import sys
 from pathlib import Path
 from unittest import mock
 
@@ -328,7 +326,6 @@ def test_discover_files_with_explicit_paths_returns_only_existing(
     )
     a_abs = valid_source_dir / "a.md"
     b_abs = valid_source_dir / "b.md"
-    missing = valid_source_dir / "nope.md"
     result = mirror.discover_files(cfg, [Path("a.md"), Path("nope.md"), b_abs])
     # Order is the order of inputs; missing files are filtered out.
     assert result == [a_abs, b_abs]
