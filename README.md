@@ -1,8 +1,8 @@
 ---
 title: mirror-pdf-drive
 author: Sebastián Illa
-version: 0.1.0
-status: draft
+version: 0.3.0
+status: stable
 ---
 
 # `mirror-pdf-drive`
