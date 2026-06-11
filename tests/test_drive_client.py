@@ -86,3 +86,105 @@ def test_update_raises_on_http_error(tmp_path: Path) -> None:
     with pytest.raises(exceptions.UploadFailedError) as excinfo:
         drive_client.update_file(service, "abc", pdf)
     assert excinfo.value.code == "UPLOAD_FAILED"
+
+
+# --- find_or_create_folder ---
+
+
+def test_find_or_create_folder_creates_when_missing() -> None:
+    service = mock.MagicMock()
+    # list returns empty → must create
+    service.files().list.return_value.execute.return_value = {"files": []}
+    service.files().create.return_value.execute.return_value = {"id": "newFolderId"}
+    folder_id = drive_client.find_or_create_folder(service, "docs", "parentX")
+    assert folder_id == "newFolderId"
+    create_kwargs = service.files().create.call_args.kwargs
+    assert create_kwargs["body"]["name"] == "docs"
+    assert create_kwargs["body"]["mimeType"] == "application/vnd.google-apps.folder"
+    assert create_kwargs["body"]["parents"] == ["parentX"]
+
+
+def test_find_or_create_folder_returns_existing() -> None:
+    service = mock.MagicMock()
+    service.files().list.return_value.execute.return_value = {
+        "files": [{"id": "existingFolderId", "name": "docs"}]
+    }
+    folder_id = drive_client.find_or_create_folder(service, "docs", "parentX")
+    assert folder_id == "existingFolderId"
+    service.files().create.assert_not_called()
+
+
+def test_find_or_create_folder_raises_on_http_error_on_list() -> None:
+    service = mock.MagicMock()
+    service.files().list.return_value.execute.side_effect = HttpError(
+        mock.MagicMock(status=500), b"boom"
+    )
+    with pytest.raises(exceptions.UploadFailedError) as excinfo:
+        drive_client.find_or_create_folder(service, "docs", "parentX")
+    assert excinfo.value.code == "UPLOAD_FAILED"
+
+
+def test_find_or_create_folder_raises_on_http_error_on_create() -> None:
+    service = mock.MagicMock()
+    service.files().list.return_value.execute.return_value = {"files": []}
+    service.files().create.return_value.execute.side_effect = HttpError(
+        mock.MagicMock(status=500), b"boom"
+    )
+    with pytest.raises(exceptions.UploadFailedError) as excinfo:
+        drive_client.find_or_create_folder(service, "docs", "parentX")
+    assert excinfo.value.code == "UPLOAD_FAILED"
+
+
+# --- upload_pdf with subfolder_path ---
+
+
+def test_upload_pdf_with_subfolder_path_creates_chain(tmp_path: Path) -> None:
+    """When subfolder_path is provided, the chain of folders is created and the file goes to the final folder."""
+    pdf = tmp_path / "doc.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n")
+
+    service = mock.MagicMock()
+    # list() returns empty for every folder lookup (no existing folders)
+    service.files().list.return_value.execute.return_value = {"files": []}
+    # First three calls create the folder chain; fourth creates the file
+    service.files().create.return_value.execute.side_effect = [
+        {"id": "gastosId"},
+        {"id": "docsId"},
+        {"id": "operacionId"},
+        {"id": "fileId"},
+    ]
+
+    file_id = drive_client.upload_pdf(
+        pdf,
+        service,
+        folder_id="rootId",
+        conflict_strategy="skip",
+        subfolder_path=["gastos-personales", "docs", "operacion"],
+    )
+    assert file_id == "fileId"
+    folder_creates = [
+        c.kwargs["body"]["name"]
+        for c in service.files().create.call_args_list[:-1]
+    ]
+    assert folder_creates == ["gastos-personales", "docs", "operacion"]
+    file_create_kwargs = service.files().create.call_args_list[-1].kwargs
+    assert file_create_kwargs["body"]["parents"] == ["operacionId"]
+    assert file_create_kwargs["body"]["name"] == "doc.pdf"
+
+
+def test_upload_pdf_with_empty_subfolder_path_behaves_like_no_subfolder(
+    tmp_path: Path,
+) -> None:
+    """Empty subfolder_path means upload directly to folder_id."""
+    pdf = tmp_path / "doc.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n")
+    service = _make_service(existing=None)
+    service.files().create.return_value.execute.return_value = {"id": "freshId"}
+    file_id = drive_client.upload_pdf(
+        pdf, service, "folderX", "skip", subfolder_path=[]
+    )
+    assert file_id == "freshId"
+    # Only one create call (the file, no folders)
+    service.files().create.assert_called_once()
+    create_kwargs = service.files().create.call_args.kwargs
+    assert create_kwargs["body"]["parents"] == ["folderX"]

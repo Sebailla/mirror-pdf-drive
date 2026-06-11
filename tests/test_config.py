@@ -73,10 +73,47 @@ def test_source_config_root_must_exist(tmp_path: Path) -> None:
 
 
 def test_drive_config_validates_strategy() -> None:
-    cfg_mod.DriveConfig(conflict_strategy="replace")
-    cfg_mod.DriveConfig(conflict_strategy="version")
+    cfg_mod.DriveConfig(root_folder_id="r", conflict_strategy="replace")
+    cfg_mod.DriveConfig(root_folder_id="r", conflict_strategy="version")
     with pytest.raises(pydantic.ValidationError):
-        cfg_mod.DriveConfig(conflict_strategy="nope")
+        cfg_mod.DriveConfig(root_folder_id="r", conflict_strategy="nope")
+
+
+def test_drive_config_root_folder_id() -> None:
+    """root_folder_id is accepted and is the new preferred field."""
+    cfg = cfg_mod.DriveConfig(root_folder_id="root123")
+    assert cfg.root_folder_id == "root123"
+    assert cfg.folder_id is None
+    assert cfg.effective_root_folder_id() == "root123"
+
+
+def test_drive_config_project_folder_name() -> None:
+    """project_folder_name is accepted as an optional override."""
+    cfg = cfg_mod.DriveConfig(
+        root_folder_id="root123", project_folder_name="my-project"
+    )
+    assert cfg.project_folder_name == "my-project"
+
+
+def test_drive_config_requires_root_or_folder() -> None:
+    """A drive config with neither root_folder_id nor folder_id fails."""
+    with pytest.raises(pydantic.ValidationError) as excinfo:
+        cfg_mod.DriveConfig()
+    assert "root_folder_id or folder_id" in str(excinfo.value)
+
+
+def test_drive_config_folder_id_still_works_for_backwards_compat() -> None:
+    """Legacy folder_id is still accepted as a single-folder target."""
+    cfg = cfg_mod.DriveConfig(folder_id="legacy123")
+    assert cfg.effective_root_folder_id() == "legacy123"
+
+
+def test_drive_config_root_takes_precedence_over_folder() -> None:
+    """When both are set, root_folder_id wins."""
+    cfg = cfg_mod.DriveConfig(
+        root_folder_id="root123", folder_id="legacy456"
+    )
+    assert cfg.effective_root_folder_id() == "root123"
 
 
 def test_render_config_defaults() -> None:

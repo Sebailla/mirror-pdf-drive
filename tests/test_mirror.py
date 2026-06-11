@@ -184,6 +184,7 @@ def test_apply_overrides_source_and_output_and_folder(tmp_path: Path) -> None:
         source_dir=cli_src,
         output_dir=cli_out,
         folder_id="cli-fid",
+        project_folder_name=None,
     )
     overridden = mirror._apply_overrides(base, args)
 
@@ -209,7 +210,9 @@ def test_apply_overrides_no_flags_returns_same_config(tmp_path: Path) -> None:
         drive=DriveConfig(folder_id="fid"),
         auth=AuthConfig(),
     )
-    args = argparse.Namespace(source_dir=None, output_dir=None, folder_id=None)
+    args = argparse.Namespace(
+        source_dir=None, output_dir=None, folder_id=None, project_folder_name=None
+    )
     assert mirror._apply_overrides(base, args) is base
 
 
@@ -223,7 +226,7 @@ def test_output_path_for_path_outside_source_root(tmp_path: Path) -> None:
         source=SourceConfig(root=src),
         output=OutputConfig(root=out),
         render=RenderConfig(),
-        drive=DriveConfig(),
+        drive=DriveConfig(folder_id="test-folder"),
         auth=AuthConfig(),
     )
     outside = Path("/definitely-not-under-src/foo.md")
@@ -242,7 +245,7 @@ def test_output_path_for_path_inside_source_root(tmp_path: Path) -> None:
         source=SourceConfig(root=src),
         output=OutputConfig(root=out),
         render=RenderConfig(),
-        drive=DriveConfig(),
+        drive=DriveConfig(folder_id="test-folder"),
         auth=AuthConfig(),
     )
     out_path = mirror._output_path_for(sub / "foo.md", cfg)
@@ -266,7 +269,7 @@ def test_should_skip_when_force_is_true(tmp_path: Path) -> None:
         source=SourceConfig(root=tmp_path),
         output=OutputConfig(root=tmp_path),
         render=RenderConfig(),
-        drive=DriveConfig(),
+        drive=DriveConfig(folder_id="test-folder"),
         auth=AuthConfig(),
     )
     assert mirror._should_skip(md, pdf, cfg, force=True) is False
@@ -282,7 +285,7 @@ def test_should_skip_when_pdf_missing(tmp_path: Path) -> None:
         source=SourceConfig(root=tmp_path),
         output=OutputConfig(root=tmp_path),
         render=RenderConfig(),
-        drive=DriveConfig(),
+        drive=DriveConfig(folder_id="test-folder"),
         auth=AuthConfig(),
     )
     assert mirror._should_skip(md, pdf, cfg, force=False) is False
@@ -306,7 +309,7 @@ def test_should_skip_when_pdf_older_than_md(tmp_path: Path) -> None:
         source=SourceConfig(root=tmp_path),
         output=OutputConfig(root=tmp_path),
         render=RenderConfig(),
-        drive=DriveConfig(),
+        drive=DriveConfig(folder_id="test-folder"),
         auth=AuthConfig(),
     )
     assert mirror._should_skip(md, pdf, cfg, force=False) is False
@@ -321,7 +324,7 @@ def test_discover_files_with_explicit_paths_returns_only_existing(
         source=SourceConfig(root=valid_source_dir),
         output=OutputConfig(root=valid_source_dir),
         render=RenderConfig(),
-        drive=DriveConfig(),
+        drive=DriveConfig(folder_id="test-folder"),
         auth=AuthConfig(),
     )
     a_abs = valid_source_dir / "a.md"
@@ -540,3 +543,149 @@ def test_main_invalid_config_returns_1(tmp_path: Path, capsys: pytest.CaptureFix
     assert code == mirror.EXIT_CONFIG_ERROR
     out_text = capsys.readouterr().out
     assert "Configuración inválida" in out_text
+
+
+# --- Project folder isolation ---
+
+
+def test_project_subfolder_path_under_source_root(tmp_path: Path) -> None:
+    """A .md at source_root/docs/operacion/foo.md maps to [project, docs, operacion]."""
+    from mirror_pdf_drive.mirror import _project_subfolder_path
+
+    src = tmp_path / "src"
+    sub = src / "docs" / "operacion"
+    sub.mkdir(parents=True)
+    md = sub / "foo.md"
+    md.write_text("# foo")
+    chain = _project_subfolder_path(md, src, "gastos-personales")
+    assert chain == ["gastos-personales", "docs", "operacion"]
+
+
+def test_project_subfolder_path_with_no_subdirs(tmp_path: Path) -> None:
+    """A .md directly under source_root maps to just [project]."""
+    from mirror_pdf_drive.mirror import _project_subfolder_path
+
+    src = tmp_path / "src"
+    src.mkdir()
+    md = src / "foo.md"
+    md.write_text("# foo")
+    chain = _project_subfolder_path(md, src, "gastos-personales")
+    assert chain == ["gastos-personales"]
+
+
+def test_project_subfolder_path_outside_source_root(tmp_path: Path) -> None:
+    """A .md not under source_root falls back to [project] (best effort)."""
+    from mirror_pdf_drive.mirror import _project_subfolder_path
+
+    md = tmp_path / "elsewhere" / "foo.md"
+    md.parent.mkdir()
+    md.write_text("# foo")
+    chain = _project_subfolder_path(md, tmp_path / "src", "gastos-personales")
+    assert chain == ["gastos-personales"]
+
+
+def test_main_uses_cwd_when_no_override(
+    valid_config_yaml: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """With no project_folder_name override, the summary uses Path.cwd().name."""
+    with (
+        mock.patch("mirror_pdf_drive.mirror.auth.get_drive_service"),
+        mock.patch("mirror_pdf_drive.mirror.render_markdown_to_pdf"),
+        mock.patch("mirror_pdf_drive.mirror.drive_client.upload_pdf"),
+    ):
+        code = mirror.main(
+            [
+                "--force",
+                "--no-upload",
+                "--config",
+                str(valid_config_yaml),
+            ]
+        )
+    assert code == mirror.EXIT_OK
+    out_text = capsys.readouterr().out
+    expected_project = Path.cwd().name
+    assert expected_project in out_text
+    assert "Drive:" in out_text
+
+
+def test_main_uses_config_override_when_set(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """When drive.project_folder_name is set, the summary uses that name."""
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "a.md").write_text("# a")
+    out = tmp_path / "out"
+    cfg_path = tmp_path / "cfg.yaml"
+    cfg_path.write_text(
+        "\n".join(
+            [
+                "version: 1",
+                f"source: {{ root: {src} }}",
+                f"output: {{ root: {out} }}",
+                "render: {}",
+                "drive:",
+                "  root_folder_id: root123",
+                "  project_folder_name: my-custom-name",
+                "  conflict_strategy: skip",
+                "auth: {}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    with (
+        mock.patch("mirror_pdf_drive.mirror.auth.get_drive_service"),
+        mock.patch("mirror_pdf_drive.mirror.render_markdown_to_pdf"),
+        mock.patch("mirror_pdf_drive.mirror.drive_client.upload_pdf"),
+    ):
+        code = mirror.main(["--force", "--no-upload", "--config", str(cfg_path)])
+    assert code == mirror.EXIT_OK
+    out_text = capsys.readouterr().out
+    assert "my-custom-name" in out_text
+    assert "Drive: root123/my-custom-name/" in out_text
+
+
+def test_main_cli_project_folder_name_overrides_config(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The --project-folder-name CLI flag overrides the config value."""
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "a.md").write_text("# a")
+    out = tmp_path / "out"
+    cfg_path = tmp_path / "cfg.yaml"
+    cfg_path.write_text(
+        "\n".join(
+            [
+                "version: 1",
+                f"source: {{ root: {src} }}",
+                f"output: {{ root: {out} }}",
+                "render: {}",
+                "drive:",
+                "  root_folder_id: root123",
+                "  project_folder_name: from-config",
+                "  conflict_strategy: skip",
+                "auth: {}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    with (
+        mock.patch("mirror_pdf_drive.mirror.auth.get_drive_service"),
+        mock.patch("mirror_pdf_drive.mirror.render_markdown_to_pdf"),
+        mock.patch("mirror_pdf_drive.mirror.drive_client.upload_pdf"),
+    ):
+        code = mirror.main(
+            [
+                "--force",
+                "--no-upload",
+                "--project-folder-name",
+                "from-cli",
+                "--config",
+                str(cfg_path),
+            ]
+        )
+    assert code == mirror.EXIT_OK
+    out_text = capsys.readouterr().out
+    assert "from-cli" in out_text
+    assert "from-config" not in out_text
