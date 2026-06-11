@@ -30,9 +30,20 @@ render:
     author: Sebastián Illa
 
 drive:
-  # ID of the destination folder in Google Drive.
+  # Fixed root folder in Google Drive where all projects are mirrored.
+  # The CLI creates a subfolder named `project_folder_name` (or
+  # `Path.cwd().name` if not set) inside this root, then mirrors
+  # the source tree structure under it.
+  # Recommended: a dedicated folder like "Mirror PDFs" in your Drive.
+  root_folder_id: null
+  # Legacy single-folder target. Kept for backwards compatibility.
+  # If both are set, root_folder_id wins.
   folder_id: null
   folder_name: Documents-es PDFs
+  # Optional override for the Drive subfolder name. If not set, the
+  # CLI uses Path.cwd().name (e.g. "gastos-personales" if you run
+  # mirror-pdf-drive from the project root).
+  project_folder_name: null
   # One of: skip, replace, version.
   conflict_strategy: skip
 
