@@ -63,6 +63,12 @@ def parse_argv(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--no-upload", action="store_true")
     parser.add_argument("--folder-id", default=None)
     parser.add_argument(
+        "--project-folder-name",
+        default=None,
+        help="Override del nombre de la subcarpeta del proyecto en Drive. "
+             "Default: Path.cwd().name.",
+    )
+    parser.add_argument(
         "--init",
         action="store_true",
         help="Bootstrap: valida config y hace OAuth flow.",
@@ -96,7 +102,7 @@ def _load_config_or_exit(args: argparse.Namespace) -> MirrorConfig | int:
 
 
 def _apply_overrides(cfg: MirrorConfig, args: argparse.Namespace) -> MirrorConfig:
-    """Apply CLI overrides (--source-dir, --output-dir, --folder-id)."""
+    """Apply CLI overrides (--source-dir, --output-dir, --folder-id, --project-folder-name)."""
     overrides: dict[str, object] = {}
     if args.source_dir is not None:
         overrides["source"] = cfg.source.model_copy(update={"root": args.source_dir})
@@ -104,6 +110,10 @@ def _apply_overrides(cfg: MirrorConfig, args: argparse.Namespace) -> MirrorConfi
         overrides["output"] = cfg.output.model_copy(update={"root": args.output_dir})
     if args.folder_id is not None:
         overrides["drive"] = cfg.drive.model_copy(update={"folder_id": args.folder_id})
+    if args.project_folder_name is not None:
+        overrides["drive"] = cfg.drive.model_copy(
+            update={"project_folder_name": args.project_folder_name}
+        )
     if not overrides:
         return cfg
     return cfg.model_copy(update=overrides)
@@ -116,6 +126,26 @@ def _output_path_for(md_path: Path, cfg: MirrorConfig) -> Path:
     except ValueError:
         relative = Path(md_path.name)
     return cfg.output.root / relative.with_suffix(".pdf")
+
+
+def _project_subfolder_path(
+    md_path: Path, source_root: Path, project_name: str
+) -> list[str]:
+    """Compute the Drive subfolder chain for a markdown file.
+
+    The chain mirrors the relative path of ``md_path`` under ``source_root``,
+    prefixed with the project name. If the markdown is directly under
+    ``source_root``, returns just ``[project_name]``. If the markdown is
+    not under ``source_root`` at all, returns ``[project_name]`` (best effort).
+    """
+    try:
+        relative = md_path.relative_to(source_root)
+    except ValueError:
+        return [project_name]
+    parts = list(relative.parts[:-1])  # drop the filename
+    if not parts:
+        return [project_name]
+    return [project_name, *parts]
 
 
 def _should_skip(md_path: Path, output_pdf: Path, cfg: MirrorConfig, force: bool) -> bool:
@@ -159,8 +189,12 @@ def _handle_one(
     args: argparse.Namespace,
     stats: Stats,
     drive_service: object,
+    project_name: str,
 ) -> None:
     output_pdf = _output_path_for(md_path, cfg)
+    subfolder_path = _project_subfolder_path(
+        md_path, cfg.source.root, project_name
+    )
 
     if _should_skip(md_path, output_pdf, cfg, args.force):
         log.info("skip (mtime): %s", md_path)
@@ -174,7 +208,11 @@ def _handle_one(
             f"[DRY-RUN] render: {md_path} -> {output_pdf} (strategy: {cfg.drive.conflict_strategy})"
         )
         if not args.no_upload:
-            print(f"[DRY-RUN] upload: {output_pdf.name} -> folder {cfg.drive.folder_id}")
+            chain = "/".join(subfolder_path)
+            print(
+                f"[DRY-RUN] upload: {output_pdf.name} -> folder "
+                f"{cfg.drive.effective_root_folder_id()}/{chain}"
+            )
         stats.rendered += 1
         return
 
@@ -193,8 +231,9 @@ def _handle_one(
         drive_client.upload_pdf(
             output_pdf,
             drive_service,
-            cfg.drive.folder_id or "",
+            cfg.drive.effective_root_folder_id(),
             cfg.drive.conflict_strategy,
+            subfolder_path=subfolder_path,
         )
         stats.uploaded += 1
     except exceptions.UploadFailedError as exc:
@@ -239,23 +278,26 @@ def run(args: argparse.Namespace) -> int:
     files = discover_files(cfg, args.paths)
     stats.discovered = len(files)
 
+    project_name = cfg.drive.project_folder_name or Path.cwd().name
+
     for md_path in files:
         try:
-            _handle_one(md_path, cfg, args, stats, drive_service)
+            _handle_one(md_path, cfg, args, stats, drive_service, project_name)
         except exceptions.AppError as exc:
             log.exception("unexpected app error on %s: %s", md_path, exc)
             return EXIT_UNEXPECTED
 
-    print_summary(stats)
+    print_summary(stats, project_name, cfg.drive.effective_root_folder_id())
     return compute_exit_code(stats)
 
 
-def print_summary(stats: Stats) -> None:
+def print_summary(stats: Stats, project_name: str, root_folder_id: str) -> None:
     print(
         f"Renderizados: {stats.rendered}. Subidos: {stats.uploaded}. "
         f"Omitidos: {stats.skipped}. Fallos: "
         f"{stats.render_failures + stats.upload_failures}."
     )
+    print(f"Drive: {root_folder_id}/{project_name}/")
 
 
 def compute_exit_code(stats: Stats) -> int:
