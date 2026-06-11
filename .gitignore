@@ -53,6 +53,13 @@ dist/
 # Mirror-pdf-drive runtime
 .mirror-pdf-drive/
 
+# Mirror-pdf-drive local config (real config with secrets/IDs, NOT the
+# example). The example lives at mirror-pdf-drive.config.example.yaml
+# and IS versioned.
+mirror-pdf-drive.config.yaml
+client_secret.json
+token.json
+
 # Local Pi runtime state
 .atl/
 .pi/

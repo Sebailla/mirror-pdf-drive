@@ -28,9 +28,23 @@ def _is_truthy_id(file_entry: dict[str, Any] | None) -> bool:
 
 
 def find_file_in_folder(service: DriveService, name: str, folder_id: str) -> dict[str, Any] | None:
-    """Find a file by ``name`` in a Drive folder. Returns the file dict or None."""
+    """Find a file by ``name`` in a Drive folder. Returns the file dict or None.
+
+    Raises ``UploadFailedError`` if the folder doesn't exist or the API
+    returns an HTTP error. A missing file in an existing folder returns None.
+    """
     query = f"name='{name}' and '{folder_id}' in parents and trashed=false"
-    results = service.files().list(q=query, fields="files(id, name)").execute()
+    try:
+        results = service.files().list(q=query, fields="files(id, name)").execute()
+    except HttpError as exc:
+        raise exceptions.UploadFailedError(
+            f"Failed to look up files in folder {folder_id}",
+            context={
+                "folder_id": folder_id,
+                "file_name": name,
+                "api_error": str(exc),
+            },
+        ) from exc
     files = results.get("files", [])
     return files[0] if files else None
 
