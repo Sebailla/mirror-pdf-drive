@@ -126,7 +126,7 @@ Reglas básicas:
 
 ## Si entra en scope pero rompe el contrato
 
-Es una decisión de版本ado. Si el cambio es:
+Es una decisión de versionado. Si el cambio es:
 - **Patch (0.1.x):** bug fix, sin breaking changes.
 - **Minor (0.x.0):** nueva funcionalidad compatible hacia
   atrás.
