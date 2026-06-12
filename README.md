@@ -248,6 +248,7 @@ pytest -m integration
 
 ## Releases
 
+- **v0.5.1** — Footer con numeración de página (Página X de Y) en el CSS default + corrección de caracteres chinos sueltos en docs
 - **v0.5.0** — Tipografía y color configurables (Inter/Roboto, WCAG AA)
 - **v0.4.1** — Fix: escapar comillas simples en queries de Drive
 - **v0.4.0** — Project folder isolation: cada proyecto tiene su subcarpeta en Drive
