@@ -97,6 +97,16 @@ feat/mirror-pdf-drive (worktree)
 | `develop` | Integración. Todas las PRs mergeadas acá. |
 | `feat/*`, `fix/*`, `docs/*`, etc. | Branches de tarea, una por concern. |
 
+**Estrategia de merge**: rebase-merge (exclusivo, squash y
+merge-commit están deshabilitados en la config del repo).
+Cada PR se mergea con `git rebase` y fast-forward, preservando
+los SHAs originales de los commits. Resultado: develop queda
+como descendiente lineal de main después de cada release, sin
+divergencia estructural. Los PRs viejos que se mergeaaron con
+squash-merge siguen en la historia con sus SHAs originales;
+después del primer PR nuevo con rebase-merge, la divergencia
+estructural desaparece.
+
 ### Comandos rápidos
 
 ```bash
