@@ -66,11 +66,11 @@ class RenderConfig(pydantic.BaseModel):
     # El CSS default no sobrescribe colores inline que pandoc pone
     # desde MD (ej. <span style="color: #abc">), solo aplica a
     # elementos sin color explícito.
-    body_color: str = "#1a1a1a"   # near-black, 16.5:1 contrast
-    heading_color: str = "#000000" # pure black, 21:1 contrast
-    link_color: str = "#0563c1"    # Office blue, 7.4:1 contrast
-    code_color: str = "#1a1a1a"   # match body
-    code_bg_color: str = "#f6f8fa" # GitHub-style very light gray
+    body_color: str = "#1a1a1a"  # near-black, 16.5:1 contrast
+    heading_color: str = "#000000"  # pure black, 21:1 contrast
+    link_color: str = "#0563c1"  # Office blue, 7.4:1 contrast
+    code_color: str = "#1a1a1a"  # match body
+    code_bg_color: str = "#f6f8fa"  # GitHub-style very light gray
 
 
 class DriveConfig(pydantic.BaseModel):
@@ -106,9 +106,7 @@ class DriveConfig(pydantic.BaseModel):
     @pydantic.model_validator(mode="after")
     def _at_least_one_target(self) -> "DriveConfig":
         if self.root_folder_id is None and self.folder_id is None:
-            raise ValueError(
-                "drive config requires either root_folder_id or folder_id"
-            )
+            raise ValueError("drive config requires either root_folder_id or folder_id")
         return self
 
     def effective_root_folder_id(self) -> str:

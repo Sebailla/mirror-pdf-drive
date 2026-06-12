@@ -65,12 +65,8 @@ def test_build_pandoc_args_caches_css(tmp_path: Path) -> None:
 
 
 def test_build_pandoc_args_different_configs_different_css(tmp_path: Path) -> None:
-    args1 = build_pandoc_args(
-        RenderConfig(body_color="#000000"), output_root=tmp_path
-    )
-    args2 = build_pandoc_args(
-        RenderConfig(body_color="#ff0000"), output_root=tmp_path
-    )
+    args1 = build_pandoc_args(RenderConfig(body_color="#000000"), output_root=tmp_path)
+    args2 = build_pandoc_args(RenderConfig(body_color="#ff0000"), output_root=tmp_path)
     assert args1[args1.index("-c") + 1] != args2[args2.index("-c") + 1]
 
 
@@ -106,6 +102,7 @@ def test_build_default_css_font_file_embedded(tmp_path: Path) -> None:
 def test_build_default_css_otf_format() -> None:
     """OTF files should use the opentype format in @font-face."""
     from pathlib import Path as P
+
     config = RenderConfig(font_file=P("/tmp/nonexistent.otf"))
     css = build_default_css(config)
     assert "opentype" in css
