@@ -52,6 +52,13 @@ def build_default_css(config: RenderConfig) -> str:
     return f"""@page {{
     size: {config.page_size};
     margin: {m.get("top", 2.0)}cm {m.get("right", 2.0)}cm {m.get("bottom", 2.0)}cm {m.get("left", 2.0)}cm;
+    @bottom-right {{
+        content: "Página " counter(page) " de " counter(pages);
+        font-family: {font_stack};
+        font-size: 9pt;
+        color: {config.body_color};
+        opacity: 0.7;
+    }}
 }}
 
 {font_face}body {{

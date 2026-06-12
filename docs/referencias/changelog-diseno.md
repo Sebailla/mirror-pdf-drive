@@ -33,7 +33,7 @@ todavía), y OAuth con scope `drive.file`.
 
 **Cambios:**
 - `README.md`: índice de toda la documentación.
-- `arquitectura/descripcion-general.md`: visión宏观 de las
+- `arquitectura/descripcion-general.md`: visión general de las
   tres capas (orquestación, módulos, contratos).
 - `arquitectura/separacion-de-archivos.md`: árbol de archivos
   del script con responsabilidades por archivo.
