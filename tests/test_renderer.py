@@ -144,3 +144,74 @@ def test_render_wraps_runtime_error(tmp_path: Path) -> None:
     assert excinfo.value.code == "RENDER_FAILED"
     assert excinfo.value.context["pandoc_error"] == "pandoc crashed"
     assert excinfo.value.context["md_path"] == str(md)
+
+
+def test_build_default_css_includes_page_numbering() -> None:
+    """The default CSS must include a 'Página X de Y' counter in the footer.
+
+    WeasyPrint honors the CSS Paged Media spec for @page margin boxes.
+    counter(page) and counter(pages) are the standard named counters.
+    """
+    css = build_default_css(RenderConfig())
+    assert "@bottom-right" in css
+    assert "counter(page)" in css
+    assert "counter(pages)" in css
+    assert "Página" in css
+
+
+def test_build_default_css_no_header() -> None:
+    """By design choice, the default CSS has no top-of-page header.
+
+    Only the footer with page numbering is shown. The @page rule
+    must NOT contain @top-left, @top-right, or @top-center.
+    """
+    css = build_default_css(RenderConfig())
+    assert "@top-left" not in css
+    assert "@top-right" not in css
+    assert "@top-center" not in css
+
+
+def test_build_default_css_footer_uses_custom_font_family() -> None:
+    """The footer should pick up a custom font_family config.
+
+    Verifies the font_stack variable is in scope where the footer
+    is generated (this is a regression test for a known bug where
+    font_stack was defined after the @page block in the f-string).
+    """
+    config = RenderConfig(font_family="'Comic Sans MS', cursive")
+    css = build_default_css(config)
+    assert "Comic Sans MS" in css
+    # Specifically check the @bottom-right block uses it.
+    assert "'Comic Sans MS', cursive" in css
+
+
+def test_docs_have_no_cjk_characters() -> None:
+    """The user-facing docs must not contain CJK (Chinese/Japanese/Korean) characters.
+
+    These are written for a Spanish-language audience. CJK characters
+    are easy to miss in code review (e.g. '宏观' instead of 'general')
+    and break the readability of the rendered PDFs. This test fails
+    fast if any are introduced.
+
+    Covered ranges:
+    - U+4E00-U+9FFF   CJK Unified Ideographs
+    - U+3400-U+4DBF   CJK Unified Ideographs Extension A
+    - U+3040-U+30FF   Hiragana + Katakana
+    - U+AC00-U+D7AF   Hangul Syllables
+    """
+    import re
+    from pathlib import Path as P
+
+    docs_root = P(__file__).parent.parent / "docs"
+    cjk_re = re.compile(
+        "[一-鿿㐀-䶿぀-ゟ゠-ヿ가-힯]"
+    )
+    offenders: list[tuple[str, int, str]] = []
+    for md in sorted(docs_root.rglob("*.md")):
+        for i, line in enumerate(md.read_text(encoding="utf-8").splitlines(), 1):
+            if cjk_re.search(line):
+                offenders.append((str(md.relative_to(docs_root.parent)), i, line.strip()))
+    assert not offenders, (
+        "Found CJK characters in docs:\n"
+        + "\n".join(f"  {p}:{ln}: {txt}" for p, ln, txt in offenders)
+    )
