@@ -239,11 +239,21 @@ output:
   clean: false
 
 render:
+  # Defaults son profesionales (Inter/Roboto, WCAG AA en blanco).
+  # Solo sobreescribí lo que necesites customizar.
   page_size: A4
   margins: {top: 2.0, bottom: 2.0, left: 2.0, right: 2.0}
   metadata:
     title: "Mi Proyecto"
     author: "Sebastián Illa"
+  # font_family: "Inter, Roboto, Helvetica, sans-serif"
+  # font_file: null  # path a .ttf/.otf para embeber via @font-face
+  # body_color: "#1a1a1a"
+  # heading_color: "#000000"
+  # link_color: "#0563c1"
+  # code_color: "#1a1a1a"
+  # code_bg_color: "#f6f8fa"
+  # css_file: null  # override total con tu propio CSS
 
 drive:
   root_folder_id: "TU_FOLDER_ID_DE_DRIVE"   # ← obligatorio
@@ -261,6 +271,48 @@ auth:
   del nombre auto-detectado del CWD.
 - NO commitees este archivo si tiene datos sensibles (Folder ID
   público está OK, pero `client_secret.json` y `token.json` NO).
+
+#### Tipografía y color (v0.5.0+)
+
+Los defaults de `render` son profesionales y no requieren
+configuración:
+
+- **Tipografía**: Inter/Roboto como preferred, fallback a
+  Helvetica/Arial/sans-serif del sistema.
+- **Colores**: validados para WCAG AA en fondo blanco
+  (contraste ≥ 4.5:1).
+- **CSS generado**: respeta los colores inline del MD original
+  (los `<span style="color: ...">` se preservan).
+- **CSS cacheado**: en `output.root/.mirror-pdf-drive-cache/`
+  con un hash de la config, no se regenera en cada corrida.
+
+Si querés customizar:
+
+```yaml
+render:
+  # Custom font stack (ej. usar SF Pro en vez de Inter)
+  font_family: "'SF Pro Display', Helvetica, sans-serif"
+
+  # Embeber font custom (debe existir en disco)
+  font_file: /Users/sebailla/fonts/Inter-Regular.ttf
+
+  # Custom colors
+  body_color: "#222222"
+  link_color: "#cc0066"
+```
+
+Para control total del CSS (márgenes custom, headers,
+footer, etc.), pasá un archivo CSS completo:
+
+```yaml
+render:
+  css_file: ~/my-styles.css
+```
+
+Si pasás `css_file`, los defaults se ignoran totalmente.
+La skill de Pi de `mirror-pdf-drive` documenta todos los
+campos y los defaults actuales. Ver la sección "Tipografía y
+color" de la SKILL.md.
 
 ### 3. Actualizar .gitignore (recomendado)
 

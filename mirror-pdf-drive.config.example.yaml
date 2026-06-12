@@ -40,9 +40,9 @@ render:
   # Path a un .ttf/.otf para embeber via @font-face. Si está set,
   # se carga antes que font_family.
   font_file: null
-  body_color: "#1a1a1a"   # near-black, 16.5:1 contrast
+  body_color: "#1a1a1a" # near-black, 16.5:1 contrast
   heading_color: "#000000" # pure black, 21:1 contrast
-  link_color: "#0563c1"    # Office blue, 7.4:1 contrast
+  link_color: "#0563c1" # Office blue, 7.4:1 contrast
   code_color: "#1a1a1a"
   code_bg_color: "#f6f8fa" # GitHub-style very light gray
 
@@ -52,7 +52,7 @@ drive:
   # `Path.cwd().name` if not set) inside this root, then mirrors
   # the source tree structure under it.
   # Recommended: a dedicated folder like "Mirror PDFs" in your Drive.
-  root_folder_id: null
+  root_folder_id: "1_gxtffQs9WendakpXrw_eCSCTj9wQEXG"
   # Legacy single-folder target. Kept for backwards compatibility.
   # If both are set, root_folder_id wins.
   folder_id: null

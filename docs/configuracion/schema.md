@@ -1,45 +1,27 @@
-# Configuración — Schema
+---
+title: Schema completo de mirror-pdf-drive.config.yaml
+author: Sebastián Illa
+version: 0.5.0
+status: stable
+---
 
-> **Schema completo del archivo `mirror-pdf-drive.config.yaml`.
-> Cada campo, su tipo, su default, su validación, y por qué
-> existe. Para ejemplos de configs reales, ver [`ejemplos.md`](./ejemplos.md).**
+# Schema completo de `mirror-pdf-drive.config.yaml`
 
-## Anatomía del archivo
+Referencia exhaustiva de todos los campos del config. Para
+ejemplos reales, ver [`mirror-pdf-drive.config.example.yaml`](../../mirror-pdf-drive.config.example.yaml) en la raíz del repo.
+
+## Estructura de alto nivel
 
 ```yaml
-# Comentarios con # son permitidos y recomendados.
-# El orden de las secciones es libre.
-version: 1                     # Schema version, siempre entero positivo.
-source: { ... }                # Qué procesar.
-output: { ... }                # Dónde dejar los PDFs antes de subir.
-render: { ... }                # Cómo renderizar MD a PDF.
-drive:  { ... }                # Dónde y cómo subir a Google Drive.
-auth:   { ... }                # Dónde está el OAuth client y el token.
-logging: { ... }               # Nivel y formato de los logs.
+version: 1            # Schema version (obligatorio)
+source: {...}        # Qué procesar
+output: {...}        # Dónde guardar PDFs locales
+render: {...}        # Cómo renderizar (tipografía, color, CSS)
+drive: {...}         # Dónde y cómo subir a Drive
+auth: {...}          # Dónde está el OAuth client y el token
 ```
 
-## Versionado
-
-| Campo | Tipo | Default | Validación |
-|---|---|---|---|
-| `version` | `int` | (obligatorio) | Entero positivo. El script rechaza versiones mayores a las que conoce. |
-
-**Por qué versionado:** si en el futuro cambia el schema
-(por ejemplo, se agrega un campo obligatorio), el script
-puede rechazar configs viejos con un mensaje claro, en vez
-de fallar de formas confusas.
-
-**Cuándo bumpear:**
-- Se agrega un campo obligatorio.
-- Se cambia el tipo de un campo existente.
-- Se renombra un campo.
-
-**Cuándo NO bumpear:**
-- Se agrega un campo opcional con default.
-- Se cambia un mensaje de error.
-- Se cambia la implementación interna sin tocar el schema.
-
-## Sección `source`
+## `source`
 
 Define **qué archivos Markdown** se procesan.
 
@@ -48,290 +30,248 @@ Define **qué archivos Markdown** se procesan.
 | `source.root` | `Path` | (obligatorio) | Debe existir. Relativo al config o absoluto. |
 | `source.include` | `list[str]` | `["**/*.md"]` | Globs válidos. |
 | `source.exclude` | `list[str]` | `[]` | Globs válidos. Se aplican después de `include`. |
-| `source.maxDepth` | `int` | `10` | Entero positivo. |
+| `source.max_depth` | `int` | `10` | Entero positivo. |
 
-### `source.root`
-
-Path al directorio raíz desde donde se buscan los `.md`.
-
-- **Relativo:** se interpreta相对于 al path del config.
-- **Absoluto:** se usa tal cual.
-
+**Ejemplo**:
 ```yaml
 source:
-  root: "Documents-es"          # relativo
-  # o
-  root: "/Users/seba/proyecto/Documents-es"   # absoluto
+  root: ./docs
+  include: ["**/*.md"]
+  exclude: ["**/drafts/**"]
+  max_depth: 5
 ```
 
-### `source.include`
+## `output`
 
-Lista de patrones glob. Solo los archivos que matcheen al
-menos un patrón se procesan.
-
-- `**` matchea cualquier número de directorios.
-- `*` matchea cualquier número de caracteres en un nivel.
-- `?` matchea un carácter.
-
-```yaml
-source:
-  include:
-    - "**/*.md"            # todos los .md recursivos
-    - "**/*.markdown"      # y los .markdown también
-```
-
-### `source.exclude`
-
-Lista de patrones glob. Los archivos que matcheen **cualquiera**
-de estos patrones se excluyen, aunque estén en `include`.
-
-```yaml
-source:
-  exclude:
-    - "**/node_modules/**"
-    - "**/dist/**"
-    - "**/.tmp/**"
-    - "**/WIP.md"          # un archivo específico
-```
-
-**Por qué exclude se aplica después de include:** así podés
-hacer "todos los .md excepto los de node_modules" sin tener
-que negar el patrón.
-
-### `source.maxDepth`
-
-Límite de recursión. Útil para no procesár directorios
-enormes por accidente.
-
-```yaml
-source:
-  maxDepth: 5     # como máximo 5 niveles de subdirectorios
-```
-
-## Sección `output`
-
-Define **dónde se escriben los PDFs** antes de subirlos a
-Drive.
+Define **dónde guardar los PDFs locales** antes de subir.
 
 | Campo | Tipo | Default | Validación |
 |---|---|---|---|
-| `output.root` | `Path` | (obligatorio) | Path válido. Se crea si no existe. |
-| `output.clean` | `bool` | `false` | Si `true`, borra el contenido de `output.root` antes de cada corrida. |
+| `output.root` | `Path` | (obligatorio) | Se crea si no existe. |
+| `output.clean` | `bool` | `false` | Si es `true`, borra el contenido de `output.root` antes de cada corrida. |
 
-### `output.root`
+**Ejemplo**:
+```yaml
+output:
+  root: ./dist/mirror-pdf-drive
+  clean: false
+```
 
-Path al directorio donde se escriben los PDFs. La estructura
-de subdirectorios se preserva: un MD en
-`Documents-es/posts/post-1.md` produce un PDF en
-`dist/mirror-pdf-drive/posts/post-1.pdf`.
+## `render`
 
-**Convención recomendada:** `dist/mirror-pdf-drive/` y agregar
-`dist/` al `.gitignore` del proyecto.
-
-### `output.clean`
-
-Si es `true`, el script borra todo el contenido de
-`output.root` antes de empezar. Útil si querés asegurarte de
-que no queden PDFs viejos de MDs que ya no existen.
-
-**Cuidado:** con `--force` y `output.clean: true`, re-renderizás
-todo y borrás PDFs viejos. Si el MD fuente se borró pero
-todavía querés conservar el PDF, no uses `clean: true`.
-
-## Sección `render`
-
-Define **cómo se renderiza** MD a PDF.
+Define **cómo renderizar los PDFs**: tipografía, color, márgenes, metadata.
 
 | Campo | Tipo | Default | Validación |
 |---|---|---|---|
-| `render.htmlTemplate` | `Path \| null` | `null` | Debe existir si no es null. |
-| `render.cssFile` | `Path \| null` | `null` | Debe existir si no es null. |
-| `render.pageSize` | `str` | `"A4"` | Uno de: `A4`, `Letter`, `Legal`. |
-| `render.margins` | `dict` | `{top: 2.0, bottom: 2.0, left: 2.0, right: 2.0}` | Cada valor es un float positivo en cm. |
-| `render.metadata` | `dict` | `{title: "Documents-es", author: "Sebastián Illa"}` | Keys: `title`, `author`, `subject`, `keywords`. |
+| `render.html_template` | `Path \| None` | `null` | Path a un template HTML de pandoc. Si está set, pandoc usa este template. |
+| `render.css_file` | `Path \| None` | `null` | Path a un archivo CSS completo. Si está set, **override total** sobre los defaults de tipografía/color. |
+| `render.page_size` | `str` | `"A4"` | `"A4"`, `"Letter"`, `"Legal"`, etc. |
+| `render.margins` | `dict[str, float]` | `{top: 2.0, bottom: 2.0, left: 2.0, right: 2.0}` | Cada key en cm. |
+| `render.metadata` | `dict[str, str]` | `{title: "Documents-es", author: "Sebastián Illa"}` | Strings. Keys vacíos se ignoran. |
 
-### `render.htmlTemplate`
+### Tipografía (v0.5.0+)
 
-Path a una plantilla Pandoc HTML. Si no se especifica, pandoc
-usa su default. Ver
-[`../script/renderizado.md`](../script/renderizado.md#plantillas-pandoc).
+| Campo | Tipo | Default | Validación |
+|---|---|---|---|
+| `render.font_family` | `str` | `"Inter, Roboto, Helvetica, Arial, sans-serif"` | CSS font-family válido. |
+| `render.font_file` | `Path \| None` | `null` | Path a un archivo `.ttf`/`.ttc`/`.otf`. Se embebe via `@font-face`. |
 
-### `render.cssFile`
+### Colores (v0.5.0+)
 
-Path a un archivo CSS que se aplica durante la conversión a
-PDF. Si no se especifica, se usa el CSS mínimo embebido en
-el script.
+Todos validados para **WCAG AA en fondo blanco**.
 
-### `render.pageSize`
+| Campo | Default | Contraste | Uso |
+|---|---|---|---|
+| `render.body_color` | `#1a1a1a` | 16.5:1 (AAA) | Texto normal |
+| `render.heading_color` | `#000000` | 21:1 (AAA) | Títulos (h1-h6) |
+| `render.link_color` | `#0563c1` | 7.4:1 (AAA) | Links |
+| `render.code_color` | `#1a1a1a` | 16.5:1 (AAA) | Código inline |
+| `render.code_bg_color` | `#f6f8fa` | 1.06:1 (bg) | Background de código |
 
-Tamaño de página. Valores soportados:
-
-- `A4` (210 × 297 mm) — default, estándar internacional.
-- `Letter` (8.5 × 11 in) — estándar US.
-- `Legal` (8.5 × 14 in) — legal US.
-
-### `render.margins`
-
-Márgenes de página en centímetros.
+### Ejemplo completo de `render`
 
 ```yaml
 render:
-  margins:
-    top: 2.5
-    bottom: 2.5
-    left: 3.0
-    right: 2.0
-```
+  # Custom font
+  font_family: "'SF Pro Display', Helvetica, sans-serif"
+  font_file: /Users/sebailla/fonts/Inter-Regular.ttf
 
-### `render.metadata`
+  # Custom colors
+  body_color: "#222222"
+  heading_color: "#000000"
+  link_color: "#cc0066"
 
-Metadata que aparece en las propiedades del PDF.
-
-```yaml
-render:
+  # Page layout
+  page_size: Letter
+  margins: {top: 1.0, bottom: 1.0, left: 1.5, right: 1.5}
   metadata:
-    title: "Atlas de Myxomycetes"      # título del PDF
-    author: "Sebastián Illa"            # autor
+    title: "Mi Proyecto"
+    author: "Sebastián Illa"
     subject: "Documentación del proyecto"
-    keywords: "atlas, myxomycetes, biología"
 ```
 
-**Por qué `author` default a "Sebastián Illa":** el AGENTS.md
-del proyecto define que toda la doc tiene como autor a
-Sebastián Illa. El script respeta esa convención.
+### Comportamiento del CSS
 
-## Sección `drive`
+- Si `css_file` está set, se usa tal cual. Los defaults de
+  tipografía/color **se ignoran**.
+- Si `css_file` NO está set, el CLI genera un CSS ad-hoc
+  con los defaults arriba y lo cachea en
+  `output.root/.mirror-pdf-drive-cache/style-<hash>.css`.
+- Runs subsecuentes con la misma config no regeneran el CSS
+  (cache hit).
+- El CSS generado **no sobrescribe los colores inline** que
+  pandoc pone desde el MD. Si el MD tiene
+  `<span style="color: #abc">`, ese color gana.
 
-Define **cómo se suben los PDFs a Google Drive**.
+### Targets CSS del default
 
-| Campo | Tipo | Default | Validación |
-|---|---|---|---|
-| `drive.folderId` | `str \| null` | `null` | Formato de ID de Drive (string alfanumérico con `-` y `_`). |
-| `drive.folderName` | `str` | `"Documents-es PDFs"` | String no vacío. |
-| `drive.conflictStrategy` | `str` | `"skip"` | Uno de: `skip`, `replace`, `version`. |
+El CSS generado targetea:
 
-### `drive.folderId`
-
-ID de la carpeta de Google Drive donde se suben los PDFs.
-
-- **Si es `null`:** el script asume que `--init` ya corrió y
-  la carpeta existe, o que la va a crear la primera corrida
-  con `--init`.
-- **Si está seteado:** se usa ese ID directamente. El script
-  no verifica que la carpeta exista hasta el momento del
-  upload (falla con 404 si no existe).
-
-**Cómo obtener el ID de una carpeta de Drive:**
-1. Abrí Drive en el browser.
-2. Navegá a la carpeta.
-3. La URL termina en `/folders/<ID_AQUÍ>`. Copialo.
-
-### `drive.folderName`
-
-Nombre de la carpeta que se crea si `folderId` es `null` y
-corre `--init`.
-
-### `drive.conflictStrategy`
-
-Qué hacer si ya existe un PDF con el mismo nombre en la
-carpeta destino.
-
-| Valor | Comportamiento |
+| Target | Propiedades |
 |---|---|
-| `skip` | No subir. El PDF local se descarta (se borrá si `--force` no se usó). Loggea `skip (exists)`. |
-| `replace` | Sobrescribir el archivo existente. El nuevo PDF reemplaza al viejo. |
-| `version` | Subir con sufijo `-v2`, `-v3`, etc. Ej: `AGENTS.pdf` → `AGENTS-v2.pdf` → `AGENTS-v3.pdf`. |
+| `@page` | size, margin |
+| `body` | font-family, color, font-size, line-height |
+| `h1`-`h6` | color, font-weight, line-height, margin, font-size |
+| `a` | color, text-decoration |
+| `a:hover` | text-decoration |
+| `code`, `pre`, `kbd`, `samp` | font-family (monospace), color, background-color, padding, border-radius, font-size |
+| `pre` | padding, overflow-x, line-height, border-radius |
+| `pre code` | background (transparent), padding (0) |
+| `blockquote` | border-left, padding-left, color, opacity |
+| `table` | border-collapse, margin |
+| `th`, `td` | border, padding, text-align |
+| `th` | background-color, font-weight |
+| `img` | max-width (100%), height (auto) |
+| `hr` | border-top |
 
-**Cuándo usar cada uno:**
-- `skip` (default): docs que se regeneran frecuentemente y
-  querés conservar la URL pública de Drive estable.
-- `replace`: docs donde la versión vieja no tiene valor
-  histórico (ej. snapshots, exports de un día).
-- `version`: docs donde querés historial completo en Drive.
+## `drive`
 
-## Sección `auth`
-
-Define **dónde están las credenciales OAuth**.
+Define **dónde y cómo subir a Google Drive**.
 
 | Campo | Tipo | Default | Validación |
 |---|---|---|---|
-| `auth.dir` | `Path \| null` | `null` | Si se especifica, debe existir o poder crearse. Acepta `${ENV_VAR}`. |
-| `auth.clientSecretFile` | `str` | `"client_secret.json"` | Nombre del archivo. |
-| `auth.tokenFile` | `str` | `"token.json"` | Nombre del archivo. |
+| `drive.root_folder_id` | `str \| None` | `null` | Folder ID de Google Drive. Obligatorio (junto con `folder_id`). |
+| `drive.folder_id` | `str \| None` | `null` | Legacy. Si ambos están, `root_folder_id` gana. |
+| `drive.folder_name` | `str` | `"Documents-es PDFs"` | Metadata. NO afecta el upload. |
+| `drive.project_folder_name` | `str \| None` | `null` | Override del nombre del subfolder. Si `null`, usa `Path.cwd().name`. |
+| `drive.conflict_strategy` | `str` | `"skip"` | `"skip"`, `"replace"`, o `"version"`. |
 
-### `auth.dir`
+### Project folder isolation (v0.4.0+)
 
-Path al directorio donde vive `client_secret.json` y
-`token.json`.
+Cuando corrés `mirror-pdf-drive`, el CLI crea una subcarpeta
+con el **nombre del proyecto** dentro de `drive.root_folder_id`.
+La estructura de carpetas source se replica adentro.
 
-- **Si es `null`:** se usa `~/.config/mirror-pdf-drive/`
-  (estándar XDG).
-- **Si está seteado:** se usa ese path, con expansión de
-  variables de entorno.
+**Resolución del nombre del subfolder** (en orden):
+1. Flag CLI `--project-folder-name <name>` (si está)
+2. `drive.project_folder_name` en el config (si está)
+3. `Path.cwd().name` (default)
 
+**Ejemplo**:
+
+```yaml
+drive:
+  root_folder_id: "1AbCdEfGhIjKlMnOpQrStUvWxYz"
+  conflict_strategy: skip
+```
+
+Corriendo `mirror-pdf-drive` desde `/path/to/gastos-personales/`,
+los PDFs van a:
+```
+<root_folder_id>/gastos-personales/docs/operacion/troubleshooting.pdf
+```
+
+### Conflicto strategies
+
+| Strategy | Comportamiento |
+|---|---|
+| `skip` | Si ya existe un PDF con el mismo nombre, no re-sube. **Default**. |
+| `replace` | Sobrescribe el PDF existente. |
+| `version` | Crea un nuevo archivo con sufijo `-1`, `-2`, etc. |
+
+## `auth`
+
+Define **dónde está el OAuth client y el token**.
+
+| Campo | Tipo | Default | Validación |
+|---|---|---|---|
+| `auth.dir` | `Path \| None` | `null` | Si `null`, usa `~/.config/mirror-pdf-drive/`. |
+| `auth.client_secret_file` | `str` | `"client_secret.json"` | Nombre del archivo dentro de `auth.dir`. |
+| `auth.token_file` | `str` | `"token.json"` | Nombre del archivo dentro de `auth.dir`. |
+
+**Override por env var**: `MIRROR_PDF_DRIVE_AUTH_DIR` override de `auth.dir`.
+
+**Ejemplo**:
 ```yaml
 auth:
-  dir: "${HOME}/.config/mirror-pdf-drive"   # explícito
-  # o
-  dir: "/opt/secrets/mirror-pdf-drive"      # absoluto, sin env vars
+  dir: ~/.config/mirror-pdf-drive
+  # Si querés usar paths custom:
+  # dir: ~/my-secure-configs/mirror-pdf-drive
+  # client_secret_file: my-client.json
+  # token_file: my-token.json
 ```
 
-### `auth.clientSecretFile`
+## Ejemplo completo
 
-Nombre del archivo con el client secret de OAuth. **No** el
-secret en sí: es el JSON que bajás de GCP Console.
+```yaml
+version: 1
 
-### `auth.tokenFile`
+source:
+  root: ./docs
+  include: ["**/*.md"]
+  exclude: []
+  max_depth: 10
 
-Nombre del archivo donde se cachea el token de OAuth
-después del flow inicial. El script lo crea, vos no.
+output:
+  root: ./dist/mirror-pdf-drive
+  clean: false
 
-## Sección `logging`
+render:
+  # Defaults son profesionales, solo customizá lo que necesites
+  page_size: A4
+  margins: {top: 2.0, bottom: 2.0, left: 2.0, right: 2.0}
+  metadata:
+    title: "Mi Proyecto"
+    author: "Sebastián Illa"
+  # Tipografía custom
+  font_family: "Inter, Roboto, Helvetica, sans-serif"
+  font_file: null
+  # Colores custom (validados para WCAG AA)
+  body_color: "#1a1a1a"
+  heading_color: "#000000"
+  link_color: "#0563c1"
+  code_color: "#1a1a1a"
+  code_bg_color: "#f6f8fa"
 
-Define **cómo se loggean** los mensajes.
+drive:
+  # Carpeta raíz fija en Drive (ej. "proyectos-archivo")
+  root_folder_id: "TU_FOLDER_ID_AQUI"
+  # Override del nombre del subfolder (opcional)
+  # project_folder_name: "mi-proyecto"
+  conflict_strategy: skip
 
-| Campo | Tipo | Default | Validación |
-|---|---|---|---|
-| `logging.level` | `str` | `"INFO"` | Uno de: `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
-| `logging.format` | `str` | `"text"` | Uno de: `text`, `json`. |
-
-### `logging.level`
-
-Nivel mínimo de log. Los mensajes por debajo del nivel
-configurado se descartan.
-
-- `DEBUG`: include `--verbose`.
-- `INFO`: corrida normal, informa qué se procesó.
-- `WARNING`: algo raro pasó pero se pudo continuar.
-- `ERROR`: algo falló y el archivo no se procesó.
-
-### `logging.format`
-
-- `text`: formato humano, con timestamp y color (si el
-  terminal lo soporta).
-- `json`: formato estructurado para parsear con `jq` o
-  similar. Útil para CI o logs centralizados.
-
-## Validación completa
-
-Cuando se carga el config, Pydantic valida:
-
-1. **Tipos:** cada campo tiene el tipo esperado. Si pasás
-   `pageSize: 4` (int en vez de str), falla.
-2. **Defaults:** los campos opcionales que no estén en el
-   YAML toman el default de Pydantic.
-3. **Validadores custom:** `field_validator` en cada modelo.
-4. **Paths:** los paths se verifican que existan (si aplica).
-
-Si algo falla, el script imprime:
-
-```
-Error: Config validation failed: mirror-pdf-drive.config.yaml
-  - source.root: Path does not exist: 'Document-es' (got: Document-es)
-  - render.pageSize: invalid value 'A5', must be one of A4, Letter, Legal
-  
-Sugerencia: revisá el archivo de config. Para más info, ver
-  Document-es/configuracion/schema.md
+auth:
+  dir: ~/.config/mirror-pdf-drive
+  client_secret_file: client_secret.json
+  token_file: token.json
 ```
 
-Y sale con exit code 1.
+## Versionado
+
+El campo `version: int` es el **schema version**. Si en el
+futuro se agregan campos obligatorios o se cambian tipos, se
+bumpea. El script rechaza configs con versiones mayores a las
+que conoce.
+
+- `version: 1` — schema actual (v0.5.0+)
+
+## Validación
+
+El config se valida con Pydantic v2. Errores comunes:
+
+| Error | Causa | Fix |
+|---|---|---|
+| `drive config requires either root_folder_id or folder_id` | Ninguno de los dos está set. | Set al menos uno. |
+| `invalid conflict_strategy: X` | Strategy no es `skip`/`replace`/`version`. | Usar uno de los 3. |
+| `source.root 'X' does not exist` | El directorio no existe. | Verificar la ruta. |
+| `pydantic.ValidationError` | Otro campo con tipo incorrecto. | Ver el traceback para el campo exacto. |

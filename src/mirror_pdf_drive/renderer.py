@@ -51,7 +51,7 @@ def build_default_css(config: RenderConfig) -> str:
     m = config.margins
     return f"""@page {{
     size: {config.page_size};
-    margin: {m.get('top', 2.0)}cm {m.get('right', 2.0)}cm {m.get('bottom', 2.0)}cm {m.get('left', 2.0)}cm;
+    margin: {m.get("top", 2.0)}cm {m.get("right", 2.0)}cm {m.get("bottom", 2.0)}cm {m.get("left", 2.0)}cm;
 }}
 
 {font_face}body {{
@@ -151,8 +151,7 @@ def _css_cache_path(config: RenderConfig, output_root: Path) -> Path:
     fingerprint = hashlib.sha256(
         f"{config.font_family}|{config.font_file}|{config.body_color}|"
         f"{config.heading_color}|{config.link_color}|{config.code_color}|"
-        f"{config.code_bg_color}|{config.page_size}|{dict(sorted(config.margins.items()))}"
-        .encode()
+        f"{config.code_bg_color}|{config.page_size}|{dict(sorted(config.margins.items()))}".encode()
     ).hexdigest()[:16]
     cache_dir = output_root / ".mirror-pdf-drive-cache"
     return cache_dir / f"style-{fingerprint}.css"
