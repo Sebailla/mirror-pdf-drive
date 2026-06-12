@@ -53,6 +53,25 @@ class RenderConfig(pydantic.BaseModel):
         }
     )
 
+    # Tipografía. Inter y Roboto como preferred (Google Fonts populares,
+    # sans-serif modernas), con fallback a fuentes del sistema si
+    # no están instaladas localmente.
+    font_family: str = "Inter, Roboto, Helvetica, Arial, sans-serif"
+
+    # Path opcional a un archivo .ttf/.otf para embeber via @font-face.
+    # Si está set, se carga antes que font_family.
+    font_file: Path | None = None
+
+    # Colores. Todos validados para WCAG AA en fondo blanco.
+    # El CSS default no sobrescribe colores inline que pandoc pone
+    # desde MD (ej. <span style="color: #abc">), solo aplica a
+    # elementos sin color explícito.
+    body_color: str = "#1a1a1a"   # near-black, 16.5:1 contrast
+    heading_color: str = "#000000" # pure black, 21:1 contrast
+    link_color: str = "#0563c1"    # Office blue, 7.4:1 contrast
+    code_color: str = "#1a1a1a"   # match body
+    code_bg_color: str = "#f6f8fa" # GitHub-style very light gray
+
 
 class DriveConfig(pydantic.BaseModel):
     """Google Drive configuration.
