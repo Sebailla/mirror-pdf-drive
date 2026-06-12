@@ -1,7 +1,7 @@
 ---
 title: Instalar mirror-pdf-drive en un nuevo repo
 author: Sebastián Illa
-version: 0.4.1
+version: 0.5.1
 status: stable
 ---
 
@@ -46,7 +46,7 @@ pip install -e ".[dev]"
 
 ```bash
 mirror-pdf-drive --version
-# Esperado: mirror-pdf-drive 0.4.1
+# Esperado: mirror-pdf-drive 0.5.1
 ```
 
 ---
@@ -585,6 +585,8 @@ mirror-pdf-drive
 ## Referencias
 
 - Repo: https://github.com/Sebailla/mirror-pdf-drive
+- Release v0.5.1: https://github.com/Sebailla/mirror-pdf-drive/releases/tag/v0.5.1
+- Release v0.5.0: https://github.com/Sebailla/mirror-pdf-drive/releases/tag/v0.5.0
 - Release v0.4.1: https://github.com/Sebailla/mirror-pdf-drive/releases/tag/v0.4.1
 - Config de ejemplo: https://github.com/Sebailla/mirror-pdf-drive/blob/main/mirror-pdf-drive.config.example.yaml
 - Validación de la skill: `docs/operacion/validar-skill-pi.md`
