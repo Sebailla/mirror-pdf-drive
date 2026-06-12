@@ -18,6 +18,7 @@ output:
 
 render:
   html_template: null
+  # Custom CSS file (overrides the auto-generated typography CSS below).
   css_file: null
   page_size: A4
   margins:
@@ -28,6 +29,22 @@ render:
   metadata:
     title: Documents-es
     author: Sebastián Illa
+
+  # Tipografía. El CLI genera un CSS con estos defaults si css_file
+  # no está set. Inter y Roboto como preferred, fallback a fonts
+  # del sistema. Los colores están validados para WCAG AA en blanco.
+  # El CSS NO sobrescribe colores inline que pandoc pone desde MD
+  # (ej. <span style="color: #abc">); los colores originales del MD
+  # se preservan.
+  font_family: "Inter, Roboto, Helvetica, Arial, sans-serif"
+  # Path a un .ttf/.otf para embeber via @font-face. Si está set,
+  # se carga antes que font_family.
+  font_file: null
+  body_color: "#1a1a1a"   # near-black, 16.5:1 contrast
+  heading_color: "#000000" # pure black, 21:1 contrast
+  link_color: "#0563c1"    # Office blue, 7.4:1 contrast
+  code_color: "#1a1a1a"
+  code_bg_color: "#f6f8fa" # GitHub-style very light gray
 
 drive:
   # Fixed root folder in Google Drive where all projects are mirrored.
